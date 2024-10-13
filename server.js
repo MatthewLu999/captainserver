@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+// Import the mysql2 package
+const mysql = require('mysql2');
 require('dotenv').config();
 
 const app = express();
@@ -8,103 +10,57 @@ app.use(cors());
 app.use(express.json()); // For parsing application/json
 
 const PORT = 3000;
-// connect to MongoDB
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://luminhphuc258:capstoneproject@healthcaredatabase.2flen.mongodb.net/?retryWrites=true&w=majority&appName=HealthCareDatabase";
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
 
 app.post('/testserver', (req, res) => {
   res.send('API FitLife is working');
 })
 
-
-app.post('/Adduser', (req, res) => {
-  res.send('API is working');
-  const { username, password, accounttype, picture } = req.body;
-  run(username, password, accounttype, picture).catch(console.dir);
+app.post('/testmysqlconnection', (req, res) => {
+  queryDatabase()
 });
 
-app.post('/CheckUser', (req, res) => {
-  const { username, password, accounttype, picture } = req.body;
-  // Assuming checkExistUser is a function that returns a promise
-  checkExistUser(username, password, accounttype, picture).catch(console.dir);
-});
+// Function to create a connection to the MySQL database
+function connectToMySQL() {
+  // Create a connection object
+  const connection = mysql.createConnection({
+    host: 'localhost', // Your MySQL server IP
+    user: 'root',  // Your MySQL username
+    password: '',  // Your MySQL password
+    database: 'audition',  // The name of the database you want to connect to
+    port: 3306,  // Default MySQL port is 3306, change if different
+  });
 
-async function checkExistUser(username, password, accounttype, picture) {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("fit_life_databse").command({ ping: 1 });
-    const db = await client.db("fit_life_databse");
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    if (!db) {
-      return { error: "Failed to connect to database" };
+  // Establish the connection
+  connection.connect(function (err) {
+    if (err) {
+      console.error('Error connecting to the MySQL database:', err);
+      return;
     }
-    try {
-      const user = await db.collection('users').findOne({ username });
-      if (user) {
-        console.log("User exists:", user);
-        return true; // User exists
-      } else {
-        console.log("User does not exist");
-        console.log("User info new:", accounttype);
-        await run(username, password, accounttype, picture).catch(console.dir);
-        return false; // User does not exist
-      }
-    } catch (error) {
-      console.error('Error finding user:', error);
-      return { error: error.message };
-    } finally {
-      await client.close();
-    }
-  } catch (error) {
-    console.error('Error finding user:', error);
-    return { error: error.message };
-  } finally {
-    await client.close();
-  }
+    console.log('Connected to the MySQL database successfully!');
+  });
+
+  // Return the connection object so it can be used in queries
+  return connection;
 }
 
-async function run(username, password, accounttype, picture) {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("fit_life_databse").command({ ping: 1 });
-    const db = await client.db("fit_life_databse");
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    if (!db) {
-      return { error: "Failed to connect to database" };
-    }
-    try {
-      const newUser = {
-        username: username,
-        password: password,
-        accountype: accounttype,
-        picture: picture
-      };
-      const result = await db.collection('users').insertOne(newUser);
-      console.log(`New user added with the following id: ${result.insertedId}`);
-      return { insertedId: result.insertedId };
-    } catch (error) {
-      console.error('Error adding user:', error);
-      return { error: error.message };
-    } finally {
-      await client.close(); // Ensure you close the connection after the operation
-    }
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
-}
+// test get data from database
+async function queryDatabase() {
+  const connection = await connectToMySQL();
 
+  // Query the database (replace with your actual query)
+  await connection.query('SELECT * FROM users', function (error, results) {
+    if (error) {
+      console.error('Error executing the query:', error);
+      return;
+    }
+
+    // Log the results of the query
+    console.log('Query Results:', results);
+  });
+
+  // Close the connection when done
+  connection.end();
+}
 
 
 app.listen(PORT, '0.0.0.0', () => {
